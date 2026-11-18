@@ -493,7 +493,7 @@ HTML_DASHBOARD = """<!DOCTYPE html>
     .card-thumb-container {
       width: 100%;
       height: 180px;
-      background: #1e293b;
+      background: #0f172a;
       position: relative;
       overflow: hidden;
       display: flex;
@@ -501,18 +501,10 @@ HTML_DASHBOARD = """<!DOCTYPE html>
       justify-content: center;
       cursor: pointer;
     }
-    .card-thumb {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transition: transform 0.3s ease;
-    }
-    .card:hover .card-thumb {
-      transform: scale(1.05);
-    }
     .card-thumb-fallback {
       position: absolute;
       inset: 0;
+      z-index: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -521,6 +513,14 @@ HTML_DASHBOARD = """<!DOCTYPE html>
       color: #64748b;
       font-size: 13px;
       gap: 6px;
+    }
+    .card-thumb {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
     .card-body {
       padding: 16px;
@@ -822,7 +822,7 @@ HTML_DASHBOARD = """<!DOCTYPE html>
               <span style="font-size: 24px;">🎨</span>
               <span>${s.name}</span>
             </div>
-            <img class="card-thumb" src="${s.poster_url}" alt="${s.name}" loading="lazy" onerror="this.style.display='none'">
+            <img class="card-thumb" src="${s.poster_url}" alt="${s.name}" onerror="this.style.display='none'">
           </div>
           <div class="card-body">
             <div class="card-num">#${s.num || '00'} • ${s.category_en}</div>
