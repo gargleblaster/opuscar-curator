@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Opuscar Skill Curator & Visual Workbench</title>
+  <meta name="description" content="Discover 99 code-driven film styles with live visual samples, audit for prompt safety, and cherry-pick clean skills for AI coding agents.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #111726;
+      --card-border: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-hover: #0ea5e9;
+      --pill-bg: #1e293b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      padding: 24px;
+      line-height: 1.5;
+    }
+    .header {
+      max-width: 1400px;
+      margin: 0 auto 20px auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .header-title h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .badge {
+      font-size: 11px;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+    .header-title p {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .header-links {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .controls {
+      max-width: 1400px;
+      margin: 0 auto 24px auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .search-row {
+      display: flex;
+      gap: 12px;
+      width: 100%;
+    }
+    .search-bar {
+      flex: 1;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 12px 18px;
+      color: #fff;
+      font-size: 15px;
+      outline: none;
+    }
+    .search-bar:focus { border-color: var(--accent); }
+    .station-filter {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      scrollbar-width: thin;
+    }
+    .station-btn {
+      background: var(--pill-bg);
+      color: var(--text-muted);
+      border: 1px solid transparent;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .station-btn:hover, .station-btn.active {
+      background: var(--accent);
+      color: #090d16;
+      font-weight: 600;
+    }
+    .grid {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    .card:hover {
+      transform: translateY(-3px);
+      border-color: #38bdf8;
+    }
+    .card-thumb-container {
+      width: 100%;
+      height: 180px;
+      background: #0f172a;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .card-thumb-fallback {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #64748b;
+      font-size: 13px;
+      gap: 6px;
+    }
+    .card-thumb {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .card-body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+    }
+    .card-num {
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    .card-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin: 2px 0 2px 0;
+      color: #fff;
+    }
+    .card-film {
+      font-size: 13px;
+      color: #38bdf8;
+      margin-bottom: 8px;
+    }
+    .card-line {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-bottom: 12px;
+      line-height: 1.4;
+      flex-grow: 1;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+    .tag {
+      background: rgba(255,255,255,0.06);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      color: #94a3b8;
+    }
+    .card-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      border-top: 1px solid var(--card-border);
+      padding-top: 12px;
+    }
+    .btn {
+      flex: 1 1 calc(50% - 6px);
+      min-width: 70px;
+      padding: 7px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      cursor: pointer;
+      border: none;
+      transition: background 0.15s;
+      text-decoration: none;
+    }
+    .btn-demo {
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-demo:hover {
+      background: rgba(56, 189, 248, 0.3);
+      border-color: #38bdf8;
+      color: #fff;
+    }
+    .btn-cat {
+      background: #1e293b;
+      color: #94a3b8;
+      border: 1px solid #334155;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-cat:hover {
+      background: #334155;
+      color: #f1f5f9;
+      border-color: #64748b;
+    }
+    .btn-inspect {
+      background: #1e293b;
+      color: #f1f5f9;
+      border: 1px solid #334155;
+    }
+    .btn-inspect:hover { background: #334155; }
+    .btn-pick {
+      background: var(--accent);
+      color: #090d16;
+    }
+    .btn-pick:hover { background: var(--accent-hover); }
+
+    /* Modal */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(6px);
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 20px;
+    }
+    .modal {
+      background: #101622;
+      border: 1px solid var(--card-border);
+      width: 100%;
+      max-width: 820px;
+      max-height: 90vh;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .modal-header {
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--card-border);
+      background: #0d121c;
+    }
+    .close-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 24px;
+      cursor: pointer;
+    }
+    .modal-content {
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .modal-sample-view {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .modal-poster {
+      flex: 1;
+      min-width: 280px;
+      max-height: 240px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: #1e293b;
+      border: 1px solid var(--card-border);
+    }
+    .modal-meta {
+      flex: 1.2;
+      min-width: 280px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .audit-box {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .audit-box.flagged {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+    .preview-box {
+      background: #080c14;
+      padding: 12px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 12px;
+      color: #94a3b8;
+      max-height: 200px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      border: 1px solid var(--card-border);
+    }
+    .modal-footer {
+      padding: 14px 20px;
+      background: #0d121c;
+      border-top: 1px solid var(--card-border);
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-title">
+      <h1>Opuscar Skill Curator & Visual Workbench <span class="badge" id="total-badge">99 Styles</span></h1>
+      <p>Browse official film samples, audit prompt safety, and cherry-pick clean code-driven animation skills for AI coding agents.</p>
+    </div>
+    <div class="header-links">
+      <a class="btn btn-cat" href="https://github.com/gargleblaster/opuscar-curator" target="_blank" rel="noopener noreferrer" style="flex: none; padding: 6px 14px;">★ GitHub Repo</a>
+      <a class="btn btn-demo" href="https://lemomo-ai.github.io/lemo-opuscar/" target="_blank" rel="noopener noreferrer" style="flex: none; padding: 6px 14px;">Upstream Workbench ↗</a>
+    </div>
+  </header>
+
+  <div class="controls">
+    <div class="search-row">
+      <input type="text" id="search" class="search-bar" placeholder="Search 99 styles by keyword (e.g. blueprint, watercolor, satellite, pixel, noir), film demo, or category...">
+    </div>
+    <div class="station-filter" id="station-filters">
+      <button class="station-btn active" data-cat="all">All Styles (99)</button>
+    </div>
+  </div>
+
+  <main class="grid" id="styles-grid"></main>
+
+  <!-- Modal -->
+  <div class="modal-backdrop" id="modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modal-title" style="color: #fff; font-size: 18px;"></h2>
+        <button class="close-btn" id="modal-close">&times;</button>
+      </div>
+      <div class="modal-content">
+        <div class="modal-sample-view">
+          <img id="modal-poster" class="modal-poster" src="" alt="Sample Poster">
+          <div class="modal-meta">
+            <div id="modal-cat" style="font-size: 12px; color: var(--accent); font-weight: 700; text-transform: uppercase;"></div>
+            <div id="modal-film" style="font-size: 16px; font-weight: 700; color: #fff;"></div>
+            <p id="modal-line" style="font-size: 13px; color: #cbd5e1; line-height: 1.4;"></p>
+            <div id="modal-uses" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;"></div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;">
+              <a id="modal-style-link" class="btn btn-demo" href="#" target="_blank" rel="noopener noreferrer" style="flex: none; padding: 7px 14px;">
+                ▶ Open Style Demo ↗
+              </a>
+              <a id="modal-cat-link" class="btn btn-cat" href="#" target="_blank" rel="noopener noreferrer" style="flex: none; padding: 7px 14px;">
+                Station Category ↗
+              </a>
+              <a id="modal-gh-link" class="btn btn-inspect" href="#" target="_blank" rel="noopener noreferrer" style="flex: none; padding: 7px 14px;">
+                GitHub Source ↗
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div id="modal-audit" class="audit-box">
+          <strong>Security Clearance:</strong> PASSED — Pure procedural canvas. Zero remote shell execution (`curl | bash`), zero setup scripts.
+        </div>
+
+        <div>
+          <h4 style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Skill Specification Preview:</h4>
+          <div id="modal-preview" class="preview-box">Loading specification...</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-inspect" id="modal-cancel" style="flex: none; min-width: 80px;">Close</button>
+        <button class="btn btn-cat" id="btn-copy-cli" style="flex: none; padding: 8px 14px;">Copy CLI Command</button>
+        <button class="btn btn-pick" id="btn-copy-skill" style="flex: none; padding: 8px 16px;">📋 Copy Tailored SKILL.md</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STATION_MAP = {
+      "Edit & Documentary": "01",
+      "Painting & Illustration": "02",
+      "Sketch & Board": "03",
+      "Traditional Crafts": "04",
+      "Print & Printmaking": "05",
+      "Graphic & Type": "06",
+      "Line Diagrams": "07",
+      "Cartoons": "08",
+      "Games": "09",
+      "Film & Tape": "10",
+      "Screens & Interfaces": "11",
+      "Light & Lines": "12",
+      "3D & Miniature": "13",
+      "Instruments & Evidence": "14",
+      "Data & Maps": "15"
+    };
+
+    const SUSPICIOUS_PATTERNS = [
+      [/(curl|wget)\s+[^\n|]*\|\s*(sh|bash)/i, "HIGH", "Remote shell pipe execution (`curl | bash`)"],
+      [/setup\.sh\s+deps/i, "HIGH", "Invokes external dependency pull / setup script"],
+      [/(sudo|chmod\s+\+s)/i, "HIGH", "Elevated root or suid privilege request"],
+      [/rm\s+-rf\s+[/~]/i, "HIGH", "Destructive recursive deletion across root or home"],
+      [/eval\s*\(/i, "MEDIUM", "Dynamic eval() code execution"],
+      [/(\.env|id_rsa|credentials|auth\.json)/i, "MEDIUM", "Accessing sensitive credential or SSH files"],
+      [/(ignore\s+(all\s+)?previous\s+instructions|system\s+prompt\s+override)/i, "HIGH", "Potential prompt injection attempt"],
+      [/(webhook|pastebin|ngrok|pipedream|requestbin)/i, "MEDIUM", "Potential external telemetry endpoint"]
+    ];
+
+    function auditContent(content) {
+      const findings = [];
+      let maxSeverity = "CLEAN";
+      for (const [re, severity, reason] of SUSPICIOUS_PATTERNS) {
+        if (re.test(content)) {
+          findings.push({ severity, reason });
+          if (severity === "HIGH" || (severity === "MEDIUM" && maxSeverity !== "HIGH")) {
+            maxSeverity = severity;
+          }
+        }
+      }
+      return {
+        status: maxSeverity === "CLEAN" ? "PASSED" : "FLAGGED",
+        severity: maxSeverity,
+        findings,
+        lines: content.split('\n').length
+      };
+    }
+
+    let styles = [];
+    let activeCat = 'all';
+    let currentStyle = null;
+    let currentFetchedMd = '';
+
+    async function loadCatalog() {
+      try {
+        const res = await fetch('./catalog.json');
+        const rawData = await res.json();
+        styles = rawData.map(item => {
+          const slug = item.slug || '';
+          const cat_en = item.category_en || 'General';
+          const station_id = STATION_MAP[cat_en] || '00';
+          return {
+            slug: slug,
+            num: item.num || '00',
+            name: item.en || slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+            name_cn: item.cn || '',
+            category_en: cat_en,
+            category_cn: item.category_cn || '',
+            station_id: station_id,
+            film: item.film || '',
+            line: item.line || '',
+            uses: item.uses || [],
+            poster_url: `https://raw.githubusercontent.com/lemomo-ai/lemo-opuscar/main/styles/${slug}/poster.jpg`,
+            style_demo_url: `https://lemomo-ai.github.io/lemo-opuscar/styles/${slug}/`,
+            category_url: `https://lemomo-ai.github.io/lemo-opuscar/#s${station_id}`,
+            github_url: `https://github.com/lemomo-ai/lemo-opuscar/tree/main/styles/${slug}`
+          };
+        });
+        document.getElementById('total-badge').textContent = `${styles.length} Styles`;
+        buildCategoryFilters();
+        renderStyles();
+      } catch (err) {
+        document.getElementById('styles-grid').innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #ef4444; padding: 40px;">Failed to load catalog.json: ${err.message}</div>`;
+      }
+    }
+
+    function buildCategoryFilters() {
+      const container = document.getElementById('station-filters');
+      const cats = new Set(styles.map(s => s.category_en).filter(Boolean));
+
+      Array.from(cats).sort().forEach(cat => {
+        const count = styles.filter(s => s.category_en === cat).length;
+        const btn = document.createElement('button');
+        btn.className = 'station-btn';
+        btn.dataset.cat = cat;
+        btn.textContent = `${cat} (${count})`;
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.station-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          activeCat = cat;
+          renderStyles();
+        });
+        container.appendChild(btn);
+      });
+    }
+
+    function renderStyles() {
+      const query = document.getElementById('search').value.toLowerCase();
+      const grid = document.getElementById('styles-grid');
+      grid.innerHTML = '';
+
+      const filtered = styles.filter(s => {
+        const matchesCat = activeCat === 'all' || s.category_en === activeCat;
+        const matchesSearch = s.name.toLowerCase().includes(query) ||
+                              s.slug.toLowerCase().includes(query) ||
+                              (s.film && s.film.toLowerCase().includes(query)) ||
+                              (s.line && s.line.toLowerCase().includes(query)) ||
+                              (s.uses && s.uses.some(u => u.toLowerCase().includes(query)));
+        return matchesCat && matchesSearch;
+      });
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #94a3b8; padding: 40px;">No matching styles found.</div>';
+        return;
+      }
+
+      filtered.forEach(s => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="card-thumb-container" onclick="openModal('${s.slug}')">
+            <div class="card-thumb-fallback">
+              <span style="font-size: 24px;">🎨</span>
+              <span>${s.name}</span>
+            </div>
+            <img class="card-thumb" src="${s.poster_url}" alt="${s.name}" onerror="this.style.display='none'">
+          </div>
+          <div class="card-body">
+            <div class="card-num">
+              <span>#${s.num || '00'} • </span>
+              <a href="${s.category_url}" target="_blank" rel="noopener noreferrer" style="color: var(--accent); text-decoration: none;" title="Go to category on workbench">${s.category_en} ↗</a>
+            </div>
+            <h3 class="card-title">${s.name}</h3>
+            ${s.film ? `<div class="card-film">Demo: "${s.film}"</div>` : ''}
+            <p class="card-line">${s.line || 'Procedural code-driven visual sequence.'}</p>
+            <div class="card-tags">
+              ${(s.uses || []).slice(0, 3).map(u => `<span class="tag">#${u}</span>`).join('')}
+            </div>
+            <div class="card-actions">
+              <a class="btn btn-demo" href="${s.style_demo_url}" target="_blank" rel="noopener noreferrer" title="Go directly to this style's standalone page">Style ↗</a>
+              <a class="btn btn-cat" href="${s.category_url}" target="_blank" rel="noopener noreferrer" title="Go to category on workbench">Station ↗</a>
+              <button class="btn btn-inspect" onclick="openModal('${s.slug}')">Inspect</button>
+              <button class="btn btn-pick" onclick="quickPick('${s.slug}')">Get Skill</button>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    async function openModal(slug) {
+      currentStyle = styles.find(item => item.slug === slug);
+      const s = currentStyle;
+      document.getElementById('modal-title').textContent = `${s.name} (#${s.num || '00'})`;
+      document.getElementById('modal-cat').textContent = `${s.category_en} ${s.category_cn ? '• ' + s.category_cn : ''}`;
+      document.getElementById('modal-film').textContent = s.film ? `Demo Film: "${s.film}"` : s.name;
+      document.getElementById('modal-line').textContent = s.line || '';
+      document.getElementById('modal-poster').src = s.poster_url;
+      document.getElementById('modal-style-link').href = s.style_demo_url;
+      document.getElementById('modal-cat-link').href = s.category_url;
+      document.getElementById('modal-gh-link').href = s.github_url;
+      document.getElementById('modal-uses').innerHTML = (s.uses || []).map(u => `<span class="tag">#${u}</span>`).join('');
+      document.getElementById('modal-preview').textContent = "Fetching official STYLE.md specification from GitHub...";
+      document.getElementById('modal').style.display = 'flex';
+
+      try {
+        const rawUrl = `https://raw.githubusercontent.com/lemomo-ai/lemo-opuscar/main/styles/${slug}/STYLE.md`;
+        const res = await fetch(rawUrl);
+        if (res.ok) {
+          currentFetchedMd = await res.text();
+        } else {
+          currentFetchedMd = `# Style Specification: ${s.name}\nCategory: ${s.category_en}\nFilm: ${s.film}\n\n${s.line}`;
+        }
+      } catch (e) {
+        currentFetchedMd = `# Style Specification: ${s.name}\nCategory: ${s.category_en}\nFilm: ${s.film}\n\n${s.line}`;
+      }
+
+      document.getElementById('modal-preview').textContent = currentFetchedMd;
+      const audit = auditContent(currentFetchedMd);
+      const auditBox = document.getElementById('modal-audit');
+      if (audit.status === 'PASSED') {
+        auditBox.className = 'audit-box';
+        auditBox.innerHTML = `<strong>Security Clearance:</strong> PASSED — ${audit.lines} lines scanned. Pure procedural canvas. Zero remote shell execution (\`curl | bash\`), zero setup scripts.`;
+      } else {
+        auditBox.className = 'audit-box flagged';
+        auditBox.innerHTML = `<strong>Security Alert:</strong> FLAGGED — Potential risk detected (${audit.findings.map(f => f.reason).join(', ')})`;
+      }
+    }
+
+    function generateSkillMd(s, styleMd) {
+      return `---
+name: opuscar-${s.slug}
+description: Generate code-driven video shorts and motion graphics in the '${s.name}' aesthetic (${s.category_en}).
+---
+
+# Opuscar Skill: ${s.name} (${s.category_en})
+
+This skill equips the assistant to produce complete visual narratives and motion sequences rendered exclusively in the **${s.name}** aesthetic using procedural code (Canvas/WebGL) and local tools without relying on heavy cloud generative video models.
+
+## Aesthetic Identity & Medium
+- **Category**: ${s.category_en} (${s.category_cn})
+- **Demo Reference**: "${s.film}"
+- **Summary**: ${s.line}
+- **Tags / Best Uses**: ${(s.uses || []).join(', ')}
+
+## Style Brief & Invariants
+\`\`\`markdown
+${styleMd.trim()}
+\`\`\`
+
+## Production Guidelines & Sandbox Rules
+1. **Local Self-Containment**:
+   - Write rendering logic into an isolated HTML/JS file executing in a Canvas/WebGL harness.
+   - Do NOT run arbitrary external setup scripts or fetch untrusted third-party binaries.
+2. **Animation Architecture**:
+   - Structure timelines using deterministic time offsets (\`t\` seconds or frame index \`f\` at 60fps).
+   - Use procedural easing equations (e.g. cubic-bezier, spring kinematics).
+`;
+    }
+
+    function quickPick(slug) {
+      openModal(slug);
+    }
+
+    document.getElementById('modal-close').onclick = () => document.getElementById('modal').style.display = 'none';
+    document.getElementById('modal-cancel').onclick = () => document.getElementById('modal').style.display = 'none';
+
+    document.getElementById('btn-copy-cli').onclick = () => {
+      if (!currentStyle) return;
+      const cmd = `opuscar-curator cherry-pick ${currentStyle.slug}`;
+      navigator.clipboard.writeText(cmd);
+      alert(`Copied CLI command to clipboard:\n${cmd}`);
+    };
+
+    document.getElementById('btn-copy-skill').onclick = () => {
+      if (!currentStyle) return;
+      const fullSkill = generateSkillMd(currentStyle, currentFetchedMd);
+      navigator.clipboard.writeText(fullSkill);
+      alert(`Copied tailored SKILL.md for '${currentStyle.name}' to clipboard!\n\nYou can paste this directly into .claude/skills/opuscar-${currentStyle.slug}/SKILL.md`);
+    };
+
+    document.getElementById('search').addEventListener('input', renderStyles);
+    document.getElementById('station-filters').firstElementChild.addEventListener('click', (e) => {
+      document.querySelectorAll('.station-btn').forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      activeCat = 'all';
+      renderStyles();
+    });
+
+    loadCatalog();
+  </script>
+</body>
+</html>
