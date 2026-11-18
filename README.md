@@ -1,5 +1,7 @@
 # Opuscar Skill Curator & Sanitizer
 
+> 🌐 **Live Web Workbench:** [**https://gargleblaster.github.io/opuscar-curator/**](https://gargleblaster.github.io/opuscar-curator/)
+
 A lightweight, zero-dependency utility that allows developers and AI coding agents to safely discover, inspect, sanitize, and **cherry-pick individual code-driven film styles** from `lemomo-ai/lemo-opuscar` into clean, isolated agent skills without polluting your host environment.
 
 ---
