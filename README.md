@@ -32,6 +32,9 @@ opuscar-curator search watercolor
 # Audit a style before using
 opuscar-curator audit satellite-briefing
 
+# Sync catalog with upstream repository to pull any newly added styles
+opuscar-curator sync
+
 # Cherry-pick a clean skill directly into your active project skills
 opuscar-curator cherry-pick satellite-briefing --dest .claude/skills
 ```

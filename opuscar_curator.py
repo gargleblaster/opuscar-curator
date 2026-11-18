@@ -22,6 +22,7 @@ import argparse
 import webbrowser
 import urllib.request
 import urllib.error
+import concurrent.futures
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 from typing import Dict, List, Any, Optional
@@ -95,6 +96,70 @@ def load_catalog_data() -> List[Dict[str, Any]]:
 
 CATALOG = load_catalog_data()
 CATALOG_BY_SLUG = {item["slug"]: item for item in CATALOG}
+
+def sync_catalog(quiet: bool = False) -> Dict[str, Any]:
+    global CATALOG, CATALOG_BY_SLUG
+    if not quiet:
+        print("\nChecking upstream lemomo-ai/lemo-opuscar on GitHub...")
+
+    api_url = "https://api.github.com/repos/lemomo-ai/lemo-opuscar/contents/styles?per_page=150"
+    try:
+        req = urllib.request.Request(api_url, headers={"User-Agent": "OpuscarCurator"})
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        msg = f"Failed to connect to GitHub API: {e}"
+        if not quiet:
+            print(f"Error: {msg}\n")
+        return {"success": False, "error": msg}
+
+    slugs = [item["name"] for item in data if item.get("type") == "dir" and item.get("name") != "_template"]
+    if not quiet:
+        print(f"Found {len(slugs)} styles upstream. Fetching individual metadata in parallel...")
+
+    def fetch_item(slug: str):
+        raw_url = f"https://raw.githubusercontent.com/lemomo-ai/lemo-opuscar/main/styles/{slug}/style.json"
+        try:
+            r = urllib.request.Request(raw_url, headers={"User-Agent": "OpuscarCurator"})
+            with urllib.request.urlopen(r, timeout=6) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except Exception:
+            return {"slug": slug, "en": slug.replace("-", " ").title(), "category_en": "General"}
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as pool:
+        raw_results = list(pool.map(fetch_item, slugs))
+
+    raw_results.sort(key=lambda x: (x.get("category_en", ""), x.get("num", "999"), x.get("slug", "")))
+
+    old_slugs = set(CATALOG_BY_SLUG.keys())
+    new_slugs = [r["slug"] for r in raw_results if r["slug"] not in old_slugs]
+
+    try:
+        with open(CATALOG_FILE, "w", encoding="utf-8") as f:
+            json.dump(raw_results, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        msg = f"Failed writing catalog.json: {e}"
+        if not quiet:
+            print(f"Error: {msg}\n")
+        return {"success": False, "error": msg}
+
+    CATALOG = load_catalog_data()
+    CATALOG_BY_SLUG = {item["slug"]: item for item in CATALOG}
+
+    if not quiet:
+        print(f"Sync complete! Total styles in catalog: {len(CATALOG)}")
+        if new_slugs:
+            print(f"New styles discovered ({len(new_slugs)}): {', '.join(new_slugs)}")
+        else:
+            print("All styles are verified and up to date.")
+        print(f"Updated {CATALOG_FILE}\n")
+
+    return {
+        "success": True,
+        "count": len(CATALOG),
+        "new_slugs": new_slugs,
+        "message": f"Successfully synced {len(CATALOG)} styles from upstream."
+    }
 
 # Security Audit Regex Rules
 SUSPICIOUS_PATTERNS = [
@@ -761,7 +826,8 @@ HTML_DASHBOARD = """<!DOCTYPE html>
       <h1>Opuscar Skill Curator & Visual Workbench <span class="badge" id="total-badge">99 Styles</span></h1>
       <p>Browse official visual film samples and cherry-pick clean, isolated agent skills without bloated repos or dangerous setup scripts.</p>
     </div>
-    <div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <button class="btn btn-demo" id="sync-btn" onclick="syncUpstream()" style="padding: 6px 12px; font-size: 12px; flex: none;">↻ Sync Upstream</button>
       <span style="font-size: 13px; color: #94a3b8;">Destination: <code>.claude/skills/</code></span>
     </div>
   </header>
@@ -977,6 +1043,27 @@ HTML_DASHBOARD = """<!DOCTYPE html>
       }
     };
 
+    async function syncUpstream() {
+      const btn = document.getElementById('sync-btn');
+      btn.textContent = 'Syncing...';
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/sync', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          alert(`Sync complete! ${data.count} styles loaded.\n${data.new_slugs.length ? 'New styles: ' + data.new_slugs.join(', ') : 'All styles are up to date.'}`);
+          loadCatalog();
+        } else {
+          alert(`Sync failed: ${data.error}`);
+        }
+      } catch (err) {
+        alert(`Error syncing: ${err.message}`);
+      } finally {
+        btn.textContent = '↻ Sync Upstream';
+        btn.disabled = false;
+      }
+    }
+
     document.getElementById('search').addEventListener('input', renderStyles);
     document.getElementById('station-filters').firstElementChild.addEventListener('click', (e) => {
       document.querySelectorAll('.station-btn').forEach(b => b.classList.remove('active'));
@@ -1028,6 +1115,12 @@ class CuratorHTTPHandler(BaseHTTPRequestHandler):
 
             result = cherry_pick_style(slug, dest)
             self.send_response(200 if result.get("success") else 400)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(result).encode("utf-8"))
+        elif self.path == "/api/sync":
+            result = sync_catalog(quiet=True)
+            self.send_response(200 if result.get("success") else 500)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(json.dumps(result).encode("utf-8"))
@@ -1136,6 +1229,7 @@ def main():
     
     subparsers = parser.add_subparsers(dest="command")
     subparsers.add_parser("list", help="List all 99 styles across all 15 stations")
+    subparsers.add_parser("sync", help="Sync and update catalog.json from upstream lemomo-ai/lemo-opuscar")
     
     search_p = subparsers.add_parser("search", help="Search styles by keyword, film, or tag")
     search_p.add_argument("query", help="Keyword or search phrase")
@@ -1156,6 +1250,8 @@ def main():
         start_server(port=args.port, open_browser=True)
     elif args.command == "list":
         cli_list()
+    elif args.command == "sync":
+        sync_catalog()
     elif args.command == "search":
         cli_search(args.query)
     elif args.command == "info":
