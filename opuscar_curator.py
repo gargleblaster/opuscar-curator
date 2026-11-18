@@ -586,6 +586,20 @@ HTML_DASHBOARD = """<!DOCTYPE html>
       cursor: pointer;
       border: none;
       transition: background 0.15s;
+      text-decoration: none;
+    }
+    .btn-demo {
+      background: rgba(56, 189, 248, 0.12);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-demo:hover {
+      background: rgba(56, 189, 248, 0.25);
+      border-color: #38bdf8;
+      color: #fff;
     }
     .btn-inspect {
       background: #1e293b;
@@ -736,6 +750,14 @@ HTML_DASHBOARD = """<!DOCTYPE html>
             <div id="modal-film" style="font-size: 16px; font-weight: 700; color: #fff;"></div>
             <p id="modal-line" style="font-size: 13px; color: #cbd5e1; line-height: 1.4;"></p>
             <div id="modal-uses" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;"></div>
+            <div style="display: flex; gap: 8px; margin-top: 10px;">
+              <a id="modal-demo-link" class="btn btn-demo" href="#" target="_blank" rel="noopener noreferrer" style="flex: none; padding: 6px 14px;">
+                ▶ Open Live Demo ↗
+              </a>
+              <a id="modal-gh-link" class="btn btn-inspect" href="#" target="_blank" rel="noopener noreferrer" style="flex: none; padding: 6px 14px;">
+                GitHub Source ↗
+              </a>
+            </div>
           </div>
         </div>
 
@@ -833,7 +855,8 @@ HTML_DASHBOARD = """<!DOCTYPE html>
               ${(s.uses || []).slice(0, 3).map(u => `<span class="tag">#${u}</span>`).join('')}
             </div>
             <div class="card-actions">
-              <button class="btn btn-inspect" onclick="openModal('${s.slug}')">Sample & Audit</button>
+              <a class="btn btn-demo" href="https://lemomo-ai.github.io/lemo-opuscar/#${s.slug}" target="_blank" rel="noopener noreferrer" title="Open live film demo in browser">Demo ↗</a>
+              <button class="btn btn-inspect" onclick="openModal('${s.slug}')">Inspect</button>
               <button class="btn btn-pick" onclick="quickPick('${s.slug}')">Cherry-Pick</button>
             </div>
           </div>
@@ -850,6 +873,8 @@ HTML_DASHBOARD = """<!DOCTYPE html>
       document.getElementById('modal-film').textContent = s.film ? `Demo Film: "${s.film}"` : s.name;
       document.getElementById('modal-line').textContent = s.line || '';
       document.getElementById('modal-poster').src = s.poster_url;
+      document.getElementById('modal-demo-link').href = `https://lemomo-ai.github.io/lemo-opuscar/#${s.slug}`;
+      document.getElementById('modal-gh-link').href = `https://github.com/lemomo-ai/lemo-opuscar/tree/main/styles/${s.slug}`;
       document.getElementById('modal-uses').innerHTML = (s.uses || []).map(u => `<span class="tag">#${u}</span>`).join('');
       document.getElementById('modal-preview').textContent = "Fetching and auditing specification...";
       document.getElementById('modal').style.display = 'flex';
@@ -1015,7 +1040,8 @@ def cli_info(slug: str):
     print(f"Demo Film:   {s.get('film','')}")
     print(f"Description: {s.get('line','')}")
     print(f"Uses:        {', '.join(s.get('uses',[]))}")
-    print(f"Sample URL:  {s['poster_url']}\n")
+    print(f"Sample URL:  {s['poster_url']}")
+    print(f"Demo URL:    https://lemomo-ai.github.io/lemo-opuscar/#{s['slug']}\n")
 
 
 def cli_audit(slug: str):
